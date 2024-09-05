@@ -1,20 +1,20 @@
 import streamlit as st
 
-st.set_page_config(page_title="My App", layout="centered")
+# Set up the main configuration for the app
+st.set_page_config(page_title="Lab Navigation", layout="centered")
 
-st.sidebar.title("Labs")
-st.sidebar.write("Select a page below:")
+# Create a sidebar for navigation between the labs
+st.sidebar.title("Lab Navigation")
+selected_lab = st.sidebar.selectbox("Choose a Lab", ["Lab 1", "Lab 2"])
 
-# List the pages as links in the sidebar
-st.sidebar.markdown("[Go to Lab 1](lab1)")
-st.sidebar.markdown("[Go to Lab 2](lab2)")
-
-# Add some basic instructions or introductory text on the main page
-st.title("Welcome to My App")
-st.write(
-    """
-    Use the sidebar to navigate between the pages:
-    - **Lab 1**: Upload a document and ask questions.
-    - **Lab 2**: Lab2.
-    """
-)
+# Display the selected page based on navigation
+if selected_lab == "Lab 1":
+    st.write("You are on **Lab 1** page")
+    # Importing Lab 1 as a function or code block
+    import lab1
+    lab1.display_lab1()
+elif selected_lab == "Lab 2":
+    st.write("You are on **Lab 2** page")
+    # Importing Lab 2 as a function or code block
+    import lab2
+    lab2.display_lab2()
