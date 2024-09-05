@@ -9,6 +9,7 @@ def read_pdf(file):
         text += page.extract_text()
     return text
 
+# Title for page 1
 st.title("Upload Document and Ask Questions")
 
 # Ask for the OpenAI API key from the main app's input.
