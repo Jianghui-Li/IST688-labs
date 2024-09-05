@@ -1,7 +1,4 @@
 import streamlit as st
-
-st.secrets["API_KEY"] == "your-api-key"
-import streamlit as st
 from openai import OpenAI
 
 # Show title and description.
