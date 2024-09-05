@@ -1,3 +1,5 @@
 streamlit
 openai
 PyPDF2
+secrets
+string
