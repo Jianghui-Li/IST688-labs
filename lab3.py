@@ -6,6 +6,8 @@ st.title("My Lab3 Question Answering Chatbot")
 openAI_model = st.sidebar.selectbox("Which Model?", ("mini", "regular"))
 model_to_use = "gpt-4o-mini" if openAI_model == "mini" else "gpt-4o"
 
+max_tokens = 1000
+
 if 'client' not in st.session_state:
     api_key = st.secrets["API_KEY"]
     st.session_state.client = OpenAI(api_key=api_key)
@@ -21,7 +23,10 @@ for msg in st.session_state.messages:
         chat_msg = st.chat_message(msg["role"])
         chat_msg.write(msg["content"])
 
-def limit_messages(messages, limit=5):
+def count_tokens(messages):
+    return sum(len(msg['content'].split()) for msg in messages)
+
+def limit_messages(messages, max_tokens):
     system_msg = [msg for msg in messages if msg["role"] == "system"]
     other_msgs = [msg for msg in messages if msg["role"] != "system"]
 
@@ -31,12 +36,25 @@ def limit_messages(messages, limit=5):
     if len(user_msgs) > 2:
         user_msgs = user_msgs[-2:]
         assistant_msgs = assistant_msgs[-2:]
-    
-    return system_msg + user_msgs + assistant_msgs
+
+    combined_msgs = []
+    for user_msg, assistant_msg in zip(user_msgs, assistant_msgs):
+        combined_msgs.append(user_msg)
+        combined_msgs.append(assistant_msg)
+
+    limited_messages = system_msg + combined_msgs
+
+    token_count = count_tokens(limited_messages)
+    while token_count > max_tokens and len(limited_messages) > 2:
+        limited_messages.pop(0)
+        token_count = count_tokens(limited_messages)
+
+    return limited_messages
 
 def get_bot_response(prompt, ask_more_info=True):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    st.session_state.messages = limit_messages(st.session_state.messages)
+    st.session_state.messages = limit_messages(st.session_state.messages, max_tokens)
+    
     client = st.session_state.client
     stream = client.chat.completions.create(
         model=model_to_use,
@@ -72,8 +90,5 @@ if prompt := st.chat_input("What's your question?"):
     
     bot_response = handle_user_input(prompt)
 
-def count_tokens(messages):
-    return sum(len(msg['content'].split()) for msg in messages)
-
 tokens_used = count_tokens(st.session_state.messages)
-st.sidebar.write(f"Tokens passed: {tokens_used}")
+st.sidebar.write(f"Tokens passed: {tokens_used}/{max_tokens}")
