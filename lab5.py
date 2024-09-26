@@ -9,7 +9,7 @@ if 'client' not in st.session_state:
     st.session_state.client = OpenAI(api_key=api_key)
 client = st.session_state.client
 
-GPT_MODEL = "gpt-4o-mini"
+GPT_MODEL = "gpt-4o-mini"  # Updated to a more recent model
 
 @retry(wait=wait_random_exponential(multiplier=1, max=40), stop=stop_after_attempt(3))
 def chat_completion_request(messages, tools=None, tool_choice=None, model=GPT_MODEL):
@@ -25,7 +25,7 @@ def chat_completion_request(messages, tools=None, tool_choice=None, model=GPT_MO
         print(colored("Unable to generate ChatCompletion response", "red"))
         print(f"Exception: {e}")
         return None
-
+    
 def get_current_weather(location, API_key):
     if "," in location:
         location = location.split(",")[0].strip()
@@ -94,43 +94,52 @@ def get_weather_and_clothing(location):
 
 def get_clothing_suggestions_with_openai(weather_info):
     prompt = f"""
-    The current weather in {weather_info['location']} is as follows:
-    - Temperature: {weather_info['temperature']} °C
-    - Feels like: {weather_info['feels_like']} °C
-    - Minimum temperature: {weather_info['temp_min']} °C
-    - Maximum temperature: {weather_info['temp_max']} °C
+    Given the following weather information for {weather_info['location']}:
+    - Current temperature: {weather_info['temperature']}°C
+    - Feels like: {weather_info['feels_like']}°C
+    - Minimum temperature: {weather_info['temp_min']}°C
+    - Maximum temperature: {weather_info['temp_max']}°C
     - Humidity: {weather_info['humidity']}%
 
-    Based on this weather, what clothing would you suggest someone wear today?
+    Please provide specific clothing suggestions for today. Include recommendations for:
+    1. Upper body (e.g., shirt, sweater, jacket)
+    2. Lower body (e.g., pants, shorts, skirt)
+    3. Footwear
+    4. Accessories (if necessary, such as hat, scarf, umbrella)
+
+    Consider the temperature range and humidity in your suggestions. Aim for comfort and appropriateness for the weather conditions.
     """
     
     response = chat_completion_request(
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant specializing in weather-appropriate clothing suggestions."},
+            {"role": "user", "content": prompt}
+        ],
     )
     
-    if response is None or 'choices' not in response:
-        return "Unable to provide clothing suggestion at the moment."
+    if response is None or not hasattr(response, 'choices') or len(response.choices) == 0:
+        return "Unable to provide clothing suggestion at the moment. Please try again later."
     
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 st.title("Weather and Clothing Suggestion Bot")
 
 location = st.text_input("Enter a city (default: Syracuse, NY):", "Syracuse, NY")
 
 if st.button("Get Weather and Suggest Clothing"):
-    weather_response = get_weather_and_clothing(location)
     weather_data = weather_tool(location)
     
     if "error" in weather_data:
         st.error(weather_data["error"])
     else:
-        st.write(f"Weather in {weather_data['location']}:")
-        st.write(f"Temperature: {weather_data['temperature']} °C")
-        st.write(f"Feels like: {weather_data['feels_like']} °C")
-        st.write(f"Min Temp: {weather_data['temp_min']} °C")
-        st.write(f"Max Temp: {weather_data['temp_max']} °C")
+        st.subheader(f"Weather in {weather_data['location']}:")
+        st.write(f"Temperature: {weather_data['temperature']}°C")
+        st.write(f"Feels like: {weather_data['feels_like']}°C")
+        st.write(f"Min Temp: {weather_data['temp_min']}°C")
+        st.write(f"Max Temp: {weather_data['temp_max']}°C")
         st.write(f"Humidity: {weather_data['humidity']}%")
 
-        suggestion = get_clothing_suggestions_with_openai(weather_data)
+        with st.spinner("Generating clothing suggestions..."):
+            suggestion = get_clothing_suggestions_with_openai(weather_data)
         st.subheader("Clothing Suggestion:")
         st.write(suggestion)
