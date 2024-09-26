@@ -64,7 +64,6 @@ def read_pdf(file_path):
     return text
 
 pdf_files = [os.path.join("pdfs/", f) for f in get_pdf_files()]
-
 existing_ids = collection.get()["ids"]
 if len(existing_ids) < len(pdf_files):
     st.write("Processing PDF files:")
@@ -79,21 +78,46 @@ if len(existing_ids) < len(pdf_files):
 else:
     st.write("PDFs already added to the collection. Skipping reprocessing.")
 
-topic = st.sidebar.selectbox("Topic", ("Text Mining", "Generative AI", "Data Science Overview"))
+if 'messages' not in st.session_state:
+    st.session_state.messages = [
+        {"role": "system", "content": "You are a helpful assistant that retrieves relevant documents based on user input."},
+        {"role": "assistant", "content": "Hi there! How can I help you today?"}
+    ]
 
-openai_client = st.session_state.openai_client
-response = openai_client.embeddings.create(
-    input=topic,
-    model="text-embedding-3-small"
-)
-query_embedding = response.data[0].embedding
+def limit_conversation_memory(messages):
+    return messages[-5:]
 
-results = collection.query(
-    query_embeddings=[query_embedding],
-    n_results=3
-)
+def handle_user_input(prompt):
+    openai_client = st.session_state.openai_client
 
-st.write(f"Top 3 relevant documents for '{topic}':")
-for i in range(len(results['documents'][0])):
-    doc_id = results['ids'][0][i]
-    st.write(f"The following file/syllabus might be helpful: {doc_id}")
+    response = openai_client.embeddings.create(
+        input=prompt,
+        model="text-embedding-3-small"
+    )
+    query_embedding = response.data[0].embedding
+
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=3
+    )
+
+    augmented_info = "I found the following relevant documents:\n"
+    for i in range(len(results['documents'][0])):
+        doc_id = results['ids'][0][i]
+        augmented_info += f"- {doc_id}\n"
+
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.messages.append({"role": "assistant", "content": augmented_info})
+    
+    return augmented_info
+
+st.title("Document Retrieval Chatbot")
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+if prompt := st.chat_input("Ask me anything!"):
+    response = handle_user_input(prompt)
+    with st.chat_message("assistant"):
+        st.markdown(response)
