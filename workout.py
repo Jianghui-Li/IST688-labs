@@ -27,7 +27,7 @@ def generate_chat_response(messages: List[Dict]) -> str:
     """Generate response using OpenAI's API."""
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages,
             max_tokens=500,
             temperature=0.7
@@ -45,7 +45,7 @@ def extract_muscle_group(text: str) -> str:
             {"role": "user", "content": text}
         ]
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=prompt,
             max_tokens=50,
             temperature=0
